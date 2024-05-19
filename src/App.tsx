@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { memo } from 'react';
 import './App.css';
 
-function App() {
-  return (
-    <div>
-    </div>
-  );
-}
+import { Map } from './components/Map';
 
-export default App;
+const App = memo(() => {
+  return (
+    <Map />
+  );
+});
+
+export { App };
