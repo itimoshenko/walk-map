@@ -4,6 +4,7 @@ import { useGPSPosition } from './useGPSPosition';
 import { useArrow } from './useArrow';
 import { useDeviceRotation } from './useDeviceRotation';
 import { useDarkOverlay } from './useDarkOverlay';
+import { useWarFog } from './useWarFog';
 import { get as getProjection } from 'ol/proj';
 
 const Map: React.FC = memo(() => {
@@ -15,8 +16,9 @@ const Map: React.FC = memo(() => {
   const projection = getProjection('EPSG:3857');
   const extent = projection?.getExtent() ?? [0, 0, 1000000, 1000000];
   const darkOverlayLayer = useDarkOverlay(extent as [number, number, number, number]);
+  const warFogLayer = useWarFog(extent as [number, number, number, number]);
 
-  useMap(mapElement, userFeature, coordinates, rotation, darkOverlayLayer);
+  useMap(mapElement, userFeature, coordinates, rotation, darkOverlayLayer, warFogLayer);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh' }}>

@@ -9,7 +9,7 @@ import { Feature } from 'ol';
 import { Geometry } from 'ol/geom';
 import 'ol/ol.css';
 
-const useMap = (mapElementRef: MutableRefObject<HTMLDivElement | null>, userFeature?: Feature<Geometry> | null, coordinates?: { latitude: number, longitude: number } | null, rotation?: number, darkOverlayLayer?: VectorLayer<VectorSource<Geometry>>) => {
+const useMap = (mapElementRef: MutableRefObject<HTMLDivElement | null>, userFeature?: Feature<Geometry> | null, coordinates?: { latitude: number, longitude: number } | null, rotation?: number, darkOverlayLayer?: VectorLayer<VectorSource<Geometry>>, warFogLayer?: VectorLayer<VectorSource<Geometry>>) => {
   const mapRef = useRef<OLMap | null>(null);
 
   useEffect(() => {
@@ -23,6 +23,10 @@ const useMap = (mapElementRef: MutableRefObject<HTMLDivElement | null>, userFeat
 
     if (darkOverlayLayer) {
       layers.push(darkOverlayLayer);
+    }
+
+    if (warFogLayer) {
+      layers.push(warFogLayer);
     }
 
     if (userFeature) {
@@ -41,11 +45,11 @@ const useMap = (mapElementRef: MutableRefObject<HTMLDivElement | null>, userFeat
       target: mapElementRef.current,
       layers,
       view: new View({
-        center: fromLonLat([37.6173, 55.7558]), // Centered on Moscow, for example
+        center: fromLonLat([37.6173, 55.7558]), // Centered on Moscow
         zoom: 17, // Установить начальный зум для масштаба 17
       }),
     });
-  }, [mapElementRef, userFeature, darkOverlayLayer]);
+  }, [mapElementRef, userFeature, darkOverlayLayer, warFogLayer]);
 
   useEffect(() => {
     if (mapRef.current && rotation !== undefined) {
