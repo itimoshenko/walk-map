@@ -1,55 +1,92 @@
-import { useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Feature } from 'ol';
 import { Style, Fill } from 'ol/style';
 import VectorSource from 'ol/source/Vector';
 import VectorLayer from 'ol/layer/Vector';
-import Polygon from 'ol/geom/Polygon';
-import { fromCircle } from 'ol/geom/Polygon';
+import Polygon, { fromCircle } from 'ol/geom/Polygon';
 import Circle from 'ol/geom/Circle';
 import { fromLonLat } from 'ol/proj';
+import { Extent } from 'ol/extent';
 
-const useWarFog = (extent: [number, number, number, number]): VectorLayer<VectorSource<Polygon>> => {
-  const [warFogLayer] = useState(() => {
-    const vectorSource = new VectorSource<Polygon>();
+type Coordinates = {
+  longitude: number;
+  latitude: number;
+};
 
-    const outerPolygon = new Polygon([[
-      [extent[0], extent[1]],
-      [extent[0], extent[3]],
-      [extent[2], extent[3]],
-      [extent[2], extent[1]],
-      [extent[0], extent[1]],
-    ]]);
+type UseWarFogProps = {
+  extent: Extent;
+  points: Coordinates[];
+};
 
-    const centerOfMoscow = fromLonLat([37.6173, 55.7558]);
-    const radius = 250; // Радиус 250 метров
+const createWarFogFeature = (extent: Extent) => {
+  const outerPolygon = new Polygon([[
+    [extent[0], extent[1]],
+    [extent[0], extent[3]],
+    [extent[2], extent[3]],
+    [extent[2], extent[1]],
+    [extent[0], extent[1]],
+  ]]);
 
-    const innerCircle = new Circle(centerOfMoscow, radius);
-    const innerPolygon = fromCircle(innerCircle, 64); // Преобразование круга в полигон
+  const warFogFeature = new Feature(outerPolygon);
 
-    const linearRing = innerPolygon.getLinearRing(0);
+  warFogFeature.setStyle(new Style({
+    fill: new Fill({
+      color: 'rgba(128, 128, 128, 0.9)',
+    }),
+  }));
 
-    console.log(linearRing);
+  return warFogFeature;
+};
 
-    if (linearRing) {
-      outerPolygon.appendLinearRing(linearRing);
-    }
+const updateWarFogFeatureGeometry = (extent: Extent, warFogFeature: Feature<Polygon>) => {
+  const outerPolygon = new Polygon([[
+    [extent[0], extent[1]],
+    [extent[0], extent[3]],
+    [extent[2], extent[3]],
+    [extent[2], extent[1]],
+    [extent[0], extent[1]],
+  ]]);
 
-    const warFogFeature = new Feature(outerPolygon);
+  const centerOfMoscow = fromLonLat([37.6173, 55.7558]);
+  const radius = 250; // Радиус 250 метров
 
-    warFogFeature.setStyle(new Style({
-      fill: new Fill({
-        color: 'rgba(128, 128, 128, 0.9)', // Серый цвет
-      }),
-    }));
+  const innerCircle = new Circle(centerOfMoscow, radius);
+  const innerPolygon = fromCircle(innerCircle, 64); // Преобразование круга в полигон
 
-    vectorSource.addFeature(warFogFeature);
+  const linearRing = innerPolygon.getLinearRing(0);
 
-    return new VectorLayer({
-      source: vectorSource,
-    });
+  if (linearRing) {
+    outerPolygon.appendLinearRing(linearRing);
+  }
+
+  warFogFeature.setGeometry(outerPolygon);
+};
+
+const createWarFogLayer = (warFogHolesFeature: Feature<Polygon>) => {
+  const vectorSource = new VectorSource<Polygon>();
+
+  vectorSource.addFeature(warFogHolesFeature);
+
+  return new VectorLayer({
+    source: vectorSource,
   });
+};
 
-  return warFogLayer;
+const useWarFog = (props: UseWarFogProps): VectorLayer<VectorSource<Polygon>> => {
+  const warFogFeatureRef = useRef<Feature<Polygon>>(
+    createWarFogFeature(props.extent),
+  );
+  const warFogLayerRef = useRef<VectorLayer<VectorSource<Polygon>>>(
+    createWarFogLayer(warFogFeatureRef.current),
+  );
+
+  useEffect(() => {
+    const warFogFeature = warFogFeatureRef.current;
+
+    updateWarFogFeatureGeometry(props.extent, warFogFeature);
+  }, [props.extent]);
+
+  return warFogLayerRef.current;
 };
 
 export { useWarFog };

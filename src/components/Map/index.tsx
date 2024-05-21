@@ -1,38 +1,43 @@
-import React, { useRef, memo } from 'react';
-import { useMap } from './useMap';
-import { useGPSPosition } from './useGPSPosition';
-import { useArrow } from './useArrow';
-import { useDeviceRotation } from './useDeviceRotation';
-import { useDarkOverlay } from './useDarkOverlay';
-import { useWarFog } from './useWarFog';
+import React, { useRef, memo, useMemo } from 'react';
 import { get as getProjection } from 'ol/proj';
+import { useMap } from './useMap';
+import { useMapArrow } from './useArrow';
+import { useWarFog } from './useWarFog';
 
-const Map: React.FC = memo(() => {
-  const mapElement = useRef<HTMLDivElement>(null);
-  const { coordinates, error, requestPermission } = useGPSPosition();
-  const rotation = useDeviceRotation();
-  const userFeature = useArrow(coordinates, rotation);
+type MapProps = {
+  position: GeolocationPosition | null;
+  rotation: number;
+};
 
-  const projection = getProjection('EPSG:3857');
-  const extent = projection?.getExtent() ?? [0, 0, 1000000, 1000000];
-  const darkOverlayLayer = useDarkOverlay(extent as [number, number, number, number]);
-  const warFogLayer = useWarFog(extent as [number, number, number, number]);
+const PROJECTION_NAME = 'EPSG:3857';
+const PROJECTION = getProjection(PROJECTION_NAME);
 
-  useMap(mapElement, userFeature, coordinates, rotation, darkOverlayLayer, warFogLayer);
+if (!PROJECTION) {
+  throw new Error(`There is no projection for name [${PROJECTION_NAME}]`);
+}
+
+const EXTENT = PROJECTION.getExtent();
+
+const Map: React.FC<MapProps> = memo(({ position, rotation }) => {
+  const mapElementRef = useRef<HTMLDivElement>(null);
+
+  const mapArrowFeature = useMapArrow({ position });
+  const warFogLayer = useWarFog({ extent: EXTENT, points: [] });
+
+  const useMapProps = useMemo(() => ({
+    mapElement: mapElementRef.current,
+    layers: [warFogLayer],
+    features: [mapArrowFeature],
+    position,
+    rotation,
+  }), [mapArrowFeature, position, rotation, warFogLayer]);
+
+  useMap(useMapProps);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100vh' }}>
-      <div ref={mapElement} style={{ width: '100%', height: '100%' }}></div>
-      {error && (
-        <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(255,255,255,0.8)', padding: '10px', borderRadius: '5px', color: 'red' }}>
-          Error: {error}
-          <button onClick={requestPermission} style={{ marginLeft: '10px', padding: '5px 10px' }}>
-            Request Permission Again
-          </button>
-        </div>
-      )}
-    </div>
+    <div ref={mapElementRef} style={{ width: '100%', height: '100%' }} />
   );
 });
 
 export { Map };
+export type { MapProps };

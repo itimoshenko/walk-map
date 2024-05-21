@@ -1,67 +1,73 @@
-import { useEffect, useRef, MutableRefObject } from 'react';
-import { Map as OLMap, View } from 'ol';
+import { useEffect, useRef } from 'react';
+import { Map as OLMap, View, Feature } from 'ol';
 import TileLayer from 'ol/layer/Tile';
 import OSM from 'ol/source/OSM';
 import { fromLonLat } from 'ol/proj';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
-import { Feature } from 'ol';
-import { Geometry } from 'ol/geom';
+import Layer from 'ol/layer/Layer';
+
 import 'ol/ol.css';
 
-const useMap = (mapElementRef: MutableRefObject<HTMLDivElement | null>, userFeature?: Feature<Geometry> | null, coordinates?: { latitude: number, longitude: number } | null, rotation?: number, darkOverlayLayer?: VectorLayer<VectorSource<Geometry>>, warFogLayer?: VectorLayer<VectorSource<Geometry>>) => {
+type CreateMapOptions = {
+  mapElement: HTMLDivElement | null;
+  layers: Layer[];
+  features: Feature[];
+};
+
+type UseMapProps = CreateMapOptions & {
+  position: GeolocationPosition | null;
+  rotation: number;
+};
+
+const createMap = (options: CreateMapOptions) => new OLMap({
+  target: options.mapElement!,
+  layers: [
+    new TileLayer({
+      source: new OSM(),
+    }),
+    ...options.layers,
+    new VectorLayer({
+      source: new VectorSource({
+        features: options.features,
+      }),
+    }),
+  ],
+  view: new View({
+    center: fromLonLat([37.6173, 55.7558]), // Centered on Moscow
+    zoom: 17,
+  }),
+});
+
+const useMap = (props: UseMapProps) => {
   const mapRef = useRef<OLMap | null>(null);
 
+  // Map initialization
   useEffect(() => {
-    if (mapRef.current || !mapElementRef.current) return; // Initialize map only once
+    if (mapRef.current || !props.mapElement) return;
 
-    const layers: (TileLayer<OSM> | VectorLayer<VectorSource<Geometry>>)[] = [
-      new TileLayer({
-        source: new OSM(),
-      }),
-    ];
-
-    if (darkOverlayLayer) {
-      layers.push(darkOverlayLayer);
-    }
-
-    if (warFogLayer) {
-      layers.push(warFogLayer);
-    }
-
-    if (userFeature) {
-      const vectorSource = new VectorSource({
-        features: [userFeature],
-      });
-
-      const vectorLayer = new VectorLayer({
-        source: vectorSource,
-      });
-
-      layers.push(vectorLayer);
-    }
-
-    mapRef.current = new OLMap({
-      target: mapElementRef.current,
-      layers,
-      view: new View({
-        center: fromLonLat([37.6173, 55.7558]), // Centered on Moscow
-        zoom: 17, // Установить начальный зум для масштаба 17
-      }),
+    mapRef.current = createMap({
+      mapElement: props.mapElement,
+      layers: props.layers,
+      features: props.features,
     });
-  }, [mapElementRef, userFeature, darkOverlayLayer, warFogLayer]);
+  }, [props.features, props.layers, props.mapElement]);
 
+  // Handle device rotation
   useEffect(() => {
-    if (mapRef.current && rotation !== undefined) {
-      mapRef.current.getView().setRotation(rotation);
+    if (mapRef.current && props.rotation !== undefined) {
+      mapRef.current.getView().setRotation(props.rotation);
     }
-  }, [rotation]);
+  }, [props.rotation]);
 
+  // Handle geolocation
   useEffect(() => {
+    const coordinates = props.position?.coords;
+
     if (mapRef.current && coordinates) {
       mapRef.current.getView().setCenter(fromLonLat([coordinates.longitude, coordinates.latitude]));
     }
-  }, [coordinates]);
+  }, [props.position?.coords]);
 
   return mapRef.current;
 };

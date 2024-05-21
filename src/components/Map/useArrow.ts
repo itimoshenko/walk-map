@@ -1,41 +1,47 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Feature } from 'ol';
 import Point from 'ol/geom/Point';
 import { Style, Icon } from 'ol/style';
 import { fromLonLat } from 'ol/proj';
 
-const useArrow = (coordinates: { latitude: number; longitude: number; heading?: number } | null, rotation: number): Feature<Point> | null => {
-  const [userFeature] = useState(() => {
-    const feature = new Feature({
-      geometry: new Point(fromLonLat([0, 0])),
-    });
-    feature.setStyle(new Style({
-      image: new Icon({
-        src: 'arrow.png', // Путь к изображению стрелки
-        anchor: [0.5, 1],
-        scale: 0.25, // Уменьшить размер стрелки в 4 раза
-        rotateWithView: true,
-      }),
-    }));
-    return feature;
-  });
-
-  useEffect(() => {
-    if (coordinates && userFeature) {
-      const geometry = userFeature.getGeometry() as Point;
-      geometry.setCoordinates(fromLonLat([coordinates.longitude, coordinates.latitude]));
-
-      const style = userFeature.getStyle() as Style;
-      if (style && style.getImage()) {
-        const image = style.getImage() as Icon;
-        if (coordinates.heading !== null && coordinates.heading !== undefined) {
-          image.setRotation((coordinates.heading * Math.PI) / 180 - rotation);
-        }
-      }
-    }
-  }, [coordinates, userFeature, rotation]);
-
-  return userFeature;
+type UseMapArrowProps = {
+  position: GeolocationPosition | null;
 };
 
-export { useArrow };
+const createMapArrowFeature = () => {
+  const ICON_SRC = 'arrow.png';
+  const ICON_SCALE = 0.25;
+
+  const feature = new Feature({
+    geometry: new Point(fromLonLat([0, 0])),
+  });
+
+  feature.setStyle(new Style({
+    image: new Icon({
+      src: ICON_SRC,
+      scale: ICON_SCALE,
+      rotateWithView: true,
+    }),
+  }));
+
+  return feature;
+};
+
+const useMapArrow = (props: UseMapArrowProps): Feature<Point> => {
+  const mapArrowFeatureRef = useRef<Feature<Point>>(createMapArrowFeature());
+
+  useEffect(() => {
+    if (props.position) {
+      const mapArrowFeature = mapArrowFeatureRef.current;
+      const mapArrowGeometry = mapArrowFeature.getGeometry()!;
+      const coordinates = props.position.coords;
+
+      mapArrowGeometry.setCoordinates(fromLonLat([coordinates.longitude, coordinates.latitude]));
+    }
+  }, [props.position]);
+
+  return mapArrowFeatureRef.current;
+};
+
+export { useMapArrow };
+export type { UseMapArrowProps };
