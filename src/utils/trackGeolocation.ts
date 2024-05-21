@@ -16,8 +16,11 @@ const trackGeolocation = async ({
   let geoWatchId: number | null = null;
   let permissionStatus: PermissionStatus | null = null;
 
-  const handlePermissionChange = () => {
-    throw new Error('Geolocation permission changed');
+  const handlePermissionChange = (event: Event) => {
+    if (event.target instanceof PermissionStatus) {
+      // eslint-disable-next-line @typescript-eslint/no-use-before-define
+      track(event.target);
+    }
   };
 
   const untrackGeolocation = () => {
@@ -28,18 +31,28 @@ const trackGeolocation = async ({
     permissionStatus?.removeEventListener('change', handlePermissionChange);
   };
 
+  function track(_permissionStatus: PermissionStatus) {
+    untrackGeolocation();
+
+    if (_permissionStatus.state === 'granted') {
+      geoWatchId = navigator.geolocation.watchPosition(successCallback, errorCallback);
+    } else if (_permissionStatus.state === 'prompt') {
+      navigator.geolocation.getCurrentPosition(successCallback, errorCallback);
+    }
+
+    _permissionStatus.addEventListener('change', handlePermissionChange);
+
+    permissionStatus = _permissionStatus;
+  }
+
   try {
     permissionStatus = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
 
-    if (permissionStatus.state === 'granted') {
-      geoWatchId = navigator.geolocation.watchPosition(successCallback, errorCallback);
-    } else if (permissionStatus.state === 'prompt') {
-      navigator.geolocation.getCurrentPosition(successCallback, errorCallback);
-    } else if (permissionStatus.state === 'denied') {
+    if (permissionStatus.state === 'denied') {
       throw new Error('Geolocation permission denied');
     }
 
-    permissionStatus.addEventListener('change', handlePermissionChange);
+    track(permissionStatus);
   } catch (err) {
     errorCallback(new Error(`Track geolocation error [${err}]`));
 

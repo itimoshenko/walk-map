@@ -47,7 +47,7 @@ const updateWarFogFeatureGeometry = (
 ) => {
   if (!positionPoints.length) return;
 
-  const VIEW_RADIUS = 250; // 250 метров
+  const VIEW_RADIUS = 150; // 250 метров
 
   // Создаем внешний полигон
   const outerPolygon = new Polygon([[

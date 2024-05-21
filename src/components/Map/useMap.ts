@@ -55,10 +55,19 @@ const useMap = (props: UseMapProps) => {
 
   // Handle device rotation
   useEffect(() => {
-    if (mapRef.current && props.rotation !== undefined) {
-      mapRef.current.getView().setRotation(props.rotation);
+    if (!mapRef.current) {
+      return;
     }
-  }, [props.rotation]);
+
+    const mapView = mapRef.current.getView();
+    const coordinates = props.position?.coords;
+
+    if (coordinates && coordinates.heading !== null && coordinates.heading !== undefined) {
+      mapView.setRotation((coordinates.heading * Math.PI) / 180);
+    } else if (mapRef.current && props.rotation !== undefined) {
+      mapView.setRotation(props.rotation);
+    }
+  }, [props.rotation, props.position]);
 
   // Handle geolocation
   useEffect(() => {
