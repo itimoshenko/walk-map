@@ -4,12 +4,13 @@ import Point from 'ol/geom/Point';
 import { Style, Icon } from 'ol/style';
 import { fromLonLat } from 'ol/proj';
 
+import arrowIcon from '../../icons/arrow.png';
+
 type UseMapArrowProps = {
   position: GeolocationPosition | null;
 };
 
 const createMapArrowFeature = () => {
-  const ICON_SRC = 'arrow.png';
   const ICON_SCALE = 0.25;
 
   const feature = new Feature({
@@ -18,9 +19,9 @@ const createMapArrowFeature = () => {
 
   feature.setStyle(new Style({
     image: new Icon({
-      src: ICON_SRC,
+      src: arrowIcon,
       scale: ICON_SCALE,
-      rotateWithView: true,
+      rotateWithView: false,
     }),
   }));
 

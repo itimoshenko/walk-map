@@ -5,13 +5,16 @@ import { App } from './App';
 import reportWebVitals from './reportWebVitals';
 
 import './index.css';
+import { LoggerProvider } from './components/Logger';
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement,
 );
 root.render(
   <React.StrictMode>
-    <App />
+    <LoggerProvider>
+      <App />
+    </LoggerProvider>
   </React.StrictMode>,
 );
 

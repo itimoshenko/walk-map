@@ -17,7 +17,7 @@ type CreateMapOptions = {
 
 type UseMapProps = CreateMapOptions & {
   position: GeolocationPosition | null;
-  rotation: number;
+  rotation: number | null;
 };
 
 const createMap = (options: CreateMapOptions) => new OLMap({
@@ -64,7 +64,7 @@ const useMap = (props: UseMapProps) => {
 
     if (coordinates && coordinates.heading !== null && coordinates.heading !== undefined) {
       mapView.setRotation((coordinates.heading * Math.PI) / 180);
-    } else if (mapRef.current && props.rotation !== undefined) {
+    } else if (mapRef.current && props.rotation) {
       mapView.setRotation(props.rotation);
     }
   }, [props.rotation, props.position]);

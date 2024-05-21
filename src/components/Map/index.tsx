@@ -7,7 +7,7 @@ import { useWarFog } from './useWarFog';
 type MapProps = {
   position: GeolocationPosition | null;
   positionPoints: GeolocationPosition[];
-  rotation: number;
+  rotation: number | null;
 };
 
 const PROJECTION_NAME = 'EPSG:3857';
