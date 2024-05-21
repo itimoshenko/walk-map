@@ -8,14 +8,16 @@ import Circle from 'ol/geom/Circle';
 import { fromLonLat } from 'ol/proj';
 import { Extent } from 'ol/extent';
 
-type Coordinates = {
-  longitude: number;
-  latitude: number;
-};
+import 'ol/ol.css';
+
+import * as jsts from 'jsts';
+import {
+  Geometry, LineString, LinearRing, MultiLineString, MultiPoint, MultiPolygon, Point,
+} from 'ol/geom';
 
 type UseWarFogProps = {
   extent: Extent;
-  points: Coordinates[];
+  positionPoints: GeolocationPosition[];
 };
 
 const createWarFogFeature = (extent: Extent) => {
@@ -38,7 +40,16 @@ const createWarFogFeature = (extent: Extent) => {
   return warFogFeature;
 };
 
-const updateWarFogFeatureGeometry = (extent: Extent, warFogFeature: Feature<Polygon>) => {
+const updateWarFogFeatureGeometry = (
+  extent: Extent,
+  warFogFeature: Feature<Geometry>,
+  positionPoints: GeolocationPosition[],
+) => {
+  if (!positionPoints.length) return;
+
+  const VIEW_RADIUS = 250; // 250 метров
+
+  // Создаем внешний полигон
   const outerPolygon = new Polygon([[
     [extent[0], extent[1]],
     [extent[0], extent[3]],
@@ -47,19 +58,48 @@ const updateWarFogFeatureGeometry = (extent: Extent, warFogFeature: Feature<Poly
     [extent[0], extent[1]],
   ]]);
 
-  const centerOfMoscow = fromLonLat([37.6173, 55.7558]);
-  const radius = 250; // Радиус 250 метров
+  const parser = new jsts.io.OL3Parser();
+  (parser as any).inject(
+    Point,
+    LineString,
+    LinearRing,
+    Polygon,
+    MultiPoint,
+    MultiLineString,
+    MultiPolygon,
+  );
 
-  const innerCircle = new Circle(centerOfMoscow, radius);
-  const innerPolygon = fromCircle(innerCircle, 64); // Преобразование круга в полигон
+  // Конвертируем внешний полигон в геометрию JSTS
+  const jstsOuterPolygon = parser.read(outerPolygon);
 
-  const linearRing = innerPolygon.getLinearRing(0);
+  // Создаем пустую геометрию для объединения
+  let combinedGeometry: jsts.geom.Geometry | null = null;
 
-  if (linearRing) {
-    outerPolygon.appendLinearRing(linearRing);
-  }
+  positionPoints.forEach((position) => {
+    const coordinates = fromLonLat([position.coords.longitude, position.coords.latitude]);
 
-  warFogFeature.setGeometry(outerPolygon);
+    // Создаем круг и преобразуем его в полигон
+    const innerCircle = new Circle(coordinates, VIEW_RADIUS);
+    const innerPolygon = fromCircle(innerCircle, 64); // Преобразование круга в полигон
+
+    // Конвертируем внутренний полигон в геометрию JSTS
+    const jstsInnerPolygon = parser.read(innerPolygon);
+
+    if (combinedGeometry === null) {
+      combinedGeometry = jstsInnerPolygon;
+    } else {
+      combinedGeometry = combinedGeometry.union(jstsInnerPolygon);
+    }
+  });
+
+  // Выполняем вычитание объединенной геометрии из внешнего полигона
+  const difference = jstsOuterPolygon.difference(combinedGeometry!);
+
+  // Конвертируем результат обратно в геометрию OpenLayers
+  const differenceGeometry: Geometry = parser.write(difference);
+
+  // Устанавливаем обновленную геометрию в feature
+  warFogFeature.setGeometry(differenceGeometry);
 };
 
 const createWarFogLayer = (warFogHolesFeature: Feature<Polygon>) => {
@@ -83,8 +123,8 @@ const useWarFog = (props: UseWarFogProps): VectorLayer<VectorSource<Polygon>> =>
   useEffect(() => {
     const warFogFeature = warFogFeatureRef.current;
 
-    updateWarFogFeatureGeometry(props.extent, warFogFeature);
-  }, [props.extent]);
+    updateWarFogFeatureGeometry(props.extent, warFogFeature, props.positionPoints);
+  }, [props.extent, props.positionPoints]);
 
   return warFogLayerRef.current;
 };

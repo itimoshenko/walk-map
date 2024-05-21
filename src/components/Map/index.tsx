@@ -6,6 +6,7 @@ import { useWarFog } from './useWarFog';
 
 type MapProps = {
   position: GeolocationPosition | null;
+  positionPoints: GeolocationPosition[];
   rotation: number;
 };
 
@@ -18,11 +19,11 @@ if (!PROJECTION) {
 
 const EXTENT = PROJECTION.getExtent();
 
-const Map: React.FC<MapProps> = memo(({ position, rotation }) => {
+const Map: React.FC<MapProps> = memo(({ position, positionPoints, rotation }) => {
   const mapElementRef = useRef<HTMLDivElement>(null);
 
   const mapArrowFeature = useMapArrow({ position });
-  const warFogLayer = useWarFog({ extent: EXTENT, points: [] });
+  const warFogLayer = useWarFog({ extent: EXTENT, positionPoints });
 
   const useMapProps = useMemo(() => ({
     mapElement: mapElementRef.current,

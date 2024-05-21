@@ -44,6 +44,12 @@ const useGeolocationPosition = (): GeolocationPositionReturnType => {
     };
   }, [track]);
 
+  useEffect(() => {
+    if (position) {
+      setError(null);
+    }
+  }, [position]);
+
   const result = useMemo(() => ({
     position,
     error,
